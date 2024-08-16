@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AES 加密解密</title>
-    <script src="crypto-js.js"></script>
+    <title>AES 聊天快速加解密</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -16,7 +16,7 @@
             justify-content: center;
         }
         .container {
-            max-width: 600px; /* 设置最大宽度 */
+            max-width: 600px;
             width: 100%;
             background: white;
             padding: 20px;
@@ -38,7 +38,6 @@
             margin-top: 10px;
             display: block;
         }
-        input[type="file"],
         input[type="text"],
         textarea {
             width: calc(100% - 20px);
@@ -51,7 +50,6 @@
             transition: border-color 0.3s;
         }
         input[type="text"]:focus,
-        input[type="file"]:focus,
         textarea:focus {
             border-color: #3498db;
             outline: none;
@@ -91,31 +89,26 @@
 </head>
 <body>
 <div class="container">
-    <h1>AES 加密解密</h1>
+    <h1>AES 聊天快速加解密</h1>
 
     <div class="info-box">
         <strong>注意：</strong> 本工具使用开源的 <code>crypto-js.js</code> 库进行加密和解密，所有的过程均在浏览器中离线处理，不会上传到服务器。
     </div>
 
-    <label for="keyFile">选择 AES 秘钥文件 (优先读取):</label>
-    <input type="file" id="keyFile">
-
-    <label for="aesKeyInput">或输入 AES 秘钥:</label>
-    <input type="text" id="aesKeyInput" placeholder="输入 AES 秘钥">
-
-    <hr>
-
-    <label for="plaintext">明文:</label>
-    <textarea id="plaintext" placeholder="输入要加密的明文" rows="4"></textarea>
-    <button id="encryptButton">加密</button>
-    <textarea id="ciphertext" placeholder="密文" readonly rows="4"></textarea>
-
-    <hr>
-
     <label for="ciphertextInput">密文:</label>
-    <textarea id="ciphertextInput" placeholder="输入要解密的密文" rows="4"></textarea>
+    <textarea id="ciphertextInput" placeholder="秘钥: 52c6eab6ce615f0cd6b3fbe26cceafa50d1129fb7f7c6b48762b39e50f67fbb3 &#13;&#10;密文: U2FsdGVkX1+AM4bO8We8hH3ZsqXRyuy97JivHxIsbDs= &#13;&#10;工具: xxxxxxx" rows="4"></textarea>
     <button id="decryptButton">解密</button>
     <textarea id="decryptedText" placeholder="解密后的明文" readonly rows="4"></textarea>
+
+    <hr>
+
+    <label for="aesKeyInput">AES 秘钥:</label>
+    <input type="text" id="aesKeyInput" placeholder="输入 AES 秘钥, 留空则自动生成">
+    <label for="plaintext">明文:</label>
+    <textarea id="plaintext" placeholder="输入要加密的明文" rows="4"></textarea>
+    <button id="encryptButton">加密并复制</button>
+    <textarea id="ciphertext" placeholder="密文" readonly rows="4"></textarea>
+
 
     <div class="footer">
         <p>
@@ -133,29 +126,16 @@
 </div>
 
 <script>
-    let aesKey = '';
-
-    document.getElementById('keyFile').addEventListener('change', function(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                aesKey = e.target.result.trim();
-            };
-            reader.readAsText(file);
-        }
-    });
+    function generateRandomKey() {
+        return CryptoJS.lib.WordArray.random(32).toString();
+    }
 
     document.getElementById('encryptButton').addEventListener('click', function() {
-        // 读取输入框的 AES 密钥
-        const inputKey = document.getElementById('aesKeyInput').value.trim();
-        if (!aesKey && !inputKey) {
-            alert('请先输入 AES 秘钥或选择 AES 秘钥文件！');
-            return;
+        let aesKey = document.getElementById('aesKeyInput').value.trim();
+        if (!aesKey) {
+            aesKey = generateRandomKey();
+            document.getElementById('aesKeyInput').value = aesKey;
         }
-
-        // 优先使用文件中的 AES 密钥
-        const keyToUse = aesKey || inputKey;
 
         const plaintext = document.getElementById('plaintext').value;
         if (!plaintext) {
@@ -163,31 +143,34 @@
             return;
         }
 
-        const ciphertext = CryptoJS.AES.encrypt(plaintext, keyToUse).toString();
-        document.getElementById('ciphertext').value = ciphertext;
+        const ciphertext = CryptoJS.AES.encrypt(plaintext, aesKey).toString();
+        const resultText = `秘钥: ${aesKey}\n密文: ${ciphertext}\n工具: ${window.location.href}`;
+        document.getElementById('ciphertext').value = resultText;
 
         // 清空明文输入框
         document.getElementById('plaintext').value = '';
+
+        // 将生成的文本复制到剪贴板
+        navigator.clipboard.writeText(resultText).then(() => {
+            alert('加密文本已复制到剪贴板！');
+        }).catch(err => {
+            console.error('无法复制到剪贴板: ', err);
+        });
     });
 
+
     document.getElementById('decryptButton').addEventListener('click', function() {
-        // 读取输入框的 AES 密钥
-        const inputKey = document.getElementById('aesKeyInput').value.trim();
-        if (!aesKey && !inputKey) {
-            alert('请先输入 AES 秘钥或选择 AES 秘钥文件！');
+        const ciphertextInput = document.getElementById('ciphertextInput').value.trim();
+        const match = ciphertextInput.match(/秘钥:\s*([a-fA-F0-9]{32,64})\s*密文:\s*([A-Za-z0-9+/=]+)/);
+        if (!match) {
+            alert('密文格式不正确！');
             return;
         }
 
-        // 优先使用文件中的 AES 密钥
-        const keyToUse = aesKey || inputKey;
+        const aesKey = match[1];
+        const ciphertext = match[2];
 
-        const ciphertext = document.getElementById('ciphertextInput').value;
-        if (!ciphertext) {
-            alert('请输入要解密的密文！');
-            return;
-        }
-
-        const bytes = CryptoJS.AES.decrypt(ciphertext, keyToUse);
+        const bytes = CryptoJS.AES.decrypt(ciphertext, aesKey);
         const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
 
         if (!decryptedText) {
