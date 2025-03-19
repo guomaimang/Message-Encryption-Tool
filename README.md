@@ -2,6 +2,8 @@
 
 这是一个基于浏览器的AES加密解密小工具，可用于安全地加密和解密消息。该工具完全在客户端运行，所有加密解密过程均在本地浏览器中进行，不会将任何数据上传到服务器。
 
+![cover](https://raw.githubusercontent.com/guomaimang/Message-Encryption-Tool/refs/heads/main/cover.png)
+
 ## 功能特点
 
 - **AES加密与解密**：使用标准AES算法对消息进行加密和解密
